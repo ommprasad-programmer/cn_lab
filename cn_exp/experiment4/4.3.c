@@ -1,79 +1,77 @@
 /*
-PR4_3_GenerateHostIPs.c:
-Program to generate and output all usable Host IP configurations within a defined Subnet space.
+PR4_3_AllUsableHostIPsInSubnet.c:
+Program that takes a subnet (e.g., 192.168.1.0/29) and generate all valid host IP addresses
+in that subnet range.
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+// Convert integer IP to dotted-decimal string
+void int_to_ip(unsigned int ip, char *buffer)
+{
+    struct in_addr addr;
+    addr.s_addr = htonl(ip);
+    strcpy(buffer, inet_ntoa(addr));
+}
 
 int main()
 {
-    int ip[4], prefix;
-    int mask[4], net_addr[4], broad_addr[4];
+    char input[30];
+    char ip_part[20];
+    int prefix;
+    unsigned int ip, netmask, network, broadcast;
 
-    printf("\n=== Generation of All Usable Host IP Addresses ===\n");
-    printf("Enter Network Base IP (separated by spaces, e.g., 192 168 1 0): ");
-    scanf("%d %d %d %d", &ip[0], &ip[1], &ip[2], &ip[3]);
+    printf("\nEnter subnet in CIDR notation (e.g., 192.168.1.0/29): ");
+    scanf("%29s", input);
 
-    printf("Enter Subnet CIDR Prefix (e.g., 28 to test shorter sample outputs safely): ");
-    scanf("%d", &prefix);
+    // Split CIDR into IP and prefix length
+    char *slash = strchr(input, '/');
+    if (!slash)
+    {
+        printf("Invalid CIDR format.\n");
+        return 1;
+    }
+
+    *slash = '\0';
+    strcpy(ip_part, input);
+    prefix = atoi(slash + 1);
 
     if (prefix < 0 || prefix > 32)
     {
-        printf("Error: Invalid prefix length assignment rules.\n");
+        printf("Invalid prefix length.\n");
         return 1;
     }
 
-    // Only generate address loops for subnet blocks sizing cleanly inside single page printouts
-    if (prefix < 20)
+    if (inet_pton(AF_INET, ip_part, &ip) != 1)
     {
-        printf("Warning: Prefix size generates too many entries (>4096 addresses) for screen simulation print cycles.\n");
-        printf("Please use a higher prefix constraint value (like 24 through 31).\n");
+        printf("Invalid IP address.\n");
         return 1;
     }
 
-    // Convert CIDR prefix value into standard 4-octet layout
-    unsigned long mask_32bit = (prefix == 0) ? 0 : (0xFFFFFFFF << (32 - prefix));
-    mask[0] = (mask_32bit >> 24) & 0xFF;
-    mask[1] = (mask_32bit >> 16) & 0xFF;
-    mask[2] = (mask_32bit >> 8) & 0xFF;
-    mask[3] = mask_32bit & 0xFF;
+    ip = ntohl(ip);
+    netmask = prefix == 0 ? 0 : (~0U << (32 - prefix));
+    network = ip & netmask;
+    broadcast = network | ~netmask;
 
-    for (int i = 0; i < 4; i++)
+    int host_count = (prefix >= 31) ? 0 : (1 << (32 - prefix)) - 2;
+
+    if (host_count <= 0)
     {
-        net_addr[i] = ip[i] & mask[i];
-        broad_addr[i] = net_addr[i] | (~mask[i] & 0xFF);
+        printf("No usable host addresses in this subnet.\n");
+        return 0;
     }
 
-    printf("\nNetwork Scope Bounds identified as:\n");
-    printf("Network ID Base Reference:  %d.%d.%d.%d\n", net_addr[0], net_addr[1], net_addr[2], net_addr[3]);
-    printf("Subnet Broadcast Terminal: %d.%d.%d.%d\n", broad_addr[0], broad_addr[1], broad_addr[2], broad_addr[3]);
-    printf("\n--- Generating List of Active Host IP Identifiers ---\n");
-
-    int count = 0;
-    // Sequential loops tracking changes smoothly inside four-octet bounds
-    for (int o1 = net_addr[0]; o1 <= broad_addr[0]; o1++)
+    printf("\nUsable IP addresses in subnet %s/%d:\n", ip_part, prefix);
+    for (unsigned int host = network + 1; host < broadcast; host++)
     {
-        for (int o2 = net_addr[1]; o2 <= broad_addr[1]; o2++)
-        {
-            for (int o3 = net_addr[2]; o3 <= broad_addr[2]; o3++)
-            {
-                for (int o4 = net_addr[3]; o4 <= broad_addr[3]; o4++)
-                {
-
-                    // Filter rule skipping exact matches to the Network Address or Broadcast boundaries
-                    if ((o1 == net_addr[0] && o2 == net_addr[1] && o3 == net_addr[2] && o4 == net_addr[3]) ||
-                        (o1 == broad_addr[0] && o2 == broad_addr[1] && o3 == broad_addr[2] && o4 == broad_addr[3]))
-                    {
-                        continue;
-                    }
-
-                    count++;
-                    printf("Host #%03d Address allocation: %d.%d.%d.%d\n", count, o1, o2, o3, o4);
-                }
-            }
-        }
+        char ip_str[INET_ADDRSTRLEN];
+        int_to_ip(host, ip_str);
+        printf("%s\n", ip_str);
     }
 
-    printf("\nOperation complete. Generated %d unique executable client targets.\n\n", count);
+    printf("\n");
     return 0;
 }

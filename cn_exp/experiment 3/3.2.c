@@ -53,6 +53,7 @@ int detectAndCorrect(int code[7])
     {
         printf("\nNo error detected.\n");
     }
+
     return errorPosition;
 }
 
@@ -85,7 +86,6 @@ int main()
 
     printf("\nEnter bit position to introduce error (1-7, 0 for no error): ");
     scanf("%d", &errorBit);
-
     if (errorBit != 0)
     {
         introduceError(code, errorBit - 1);
@@ -95,7 +95,6 @@ int main()
 
     printf("\n\n--- Receiver Side ---\n");
     int corrected = detectAndCorrect(code);
-
     printf("\nCorrected Codeword: ");
     displayCode(code);
 

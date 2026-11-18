@@ -1,6 +1,7 @@
 /*
-PR3_5_GoBackN.c:
-Program to simulate the Go-Back-N Automatic Repeat Request (ARQ) protocol.
+PR3_5_GoBackNARQ.c:
+Program to simulate the Go-Back-N Automatic Repeat Request (REQ) Protocol
+where the sliding window size and the number of frames are given by the user
 */
 
 #include <stdio.h>
@@ -9,48 +10,60 @@ Program to simulate the Go-Back-N Automatic Repeat Request (ARQ) protocol.
 
 int main()
 {
-    int total_frames, window_size;
-    int sent = 0, ack = 0;
+    int windowSize, numFrames, base = 0, nextSeqNum = 0;
+    int receivedFrames = 0; // Keep track of successfully received frames
+    int corruptedFrames = 0; // Keep track of corrupted frames
 
-    // Seed for random frame loss simulation
-    srand(time(NULL));
+    printf("\nEnter the window size: ");
+    scanf("%d", &windowSize);
 
-    printf("\n--- Go-Back-N ARQ Simulation ---\n");
-    printf("Enter the total number of frames to send: ");
-    scanf("%d", &total_frames);
-    printf("Enter the window size: ");
-    scanf("%d", &window_size);
+    printf("Enter the number of frames: ");
+    scanf("%d", &numFrames);
+    printf("\n");
 
-    printf("\n--- Transmission Started ---\n");
+    srand(time(NULL)); // Seed the random number generator
 
-    while (ack < total_frames)
+    while (base < numFrames)
     {
-        // Transmit frames within the active window limits
-        for (int i = sent; i < ack + window_size && i < total_frames; i++)
+        // Sender side: Send frames within the window
+        for (int i = 0; i < windowSize && nextSeqNum < numFrames; i++)
         {
-            printf("Sender: Sending Frame %d\n", i);
-            sent++;
+            printf("Sending frame: %d\n", nextSeqNum);
+            nextSeqNum++;
         }
 
-        // Simulate network behavior for the oldest unacknowledged frame
-        // Generates a random value: 0 for loss/timeout, 1 for successful receipt
-        int success = rand() % 2;
+        // Simulate frame reception (with potential errors)
+        for (int i = base; i < nextSeqNum; i++)
+        {
+            int random_number = rand() % 10; // Generate a random number (0-9)
 
-        if (success == 0)
-        {
-            printf("\n!!! Timeout: No ACK received for Frame %d !!!\n", ack);
-            printf("Go-Back-N Action: Retransmitting window starting from Frame %d\n\n", ack);
-            // Roll back sender pointer to retransmit everything after the lost frame
-            sent = ack;
+            // Simulate a corrupted frame (10% chance of corruption)
+            if (random_number == 0)
+            {
+                printf("Frame %d corrupted!\n", i);
+                corruptedFrames++;
+            }
+            else
+            {
+                printf("Frame %d received successfully\n", i);
+                receivedFrames++;
+
+                // Simulate cumulative acknowledgement
+                if (receivedFrames == base + 1)
+                {
+                  base++; // Move the window forward
+                  receivedFrames = 0; // Reset counter
+                }
+            }
         }
-        else
+        if (corruptedFrames > 0)
         {
-            printf("Receiver: Received Frame %d successfully\n", ack);
-            printf("Receiver: Sent ACK %d\n\n", ack + 1);
-            ack++; // Slide the window forward
+            printf("Go-Back-N: Retransmitting from frame %d\n", base);
+            nextSeqNum = base; // Reset the next sequence number to base
+            corruptedFrames = 0;
         }
     }
 
-    printf("--- All %d frames successfully transmitted and acknowledged! ---\n\n", total_frames);
+    printf("\nAll frames sent and acknowledged.\n\n");
     return 0;
 }

@@ -43,8 +43,7 @@ void differentialManchester(int data[], int n)
             {
                 printf("| + to - ");
                 current_level = 0;
-            }
-            else
+            } else
             {
                 printf("| - to + ");
                 current_level = 1;
@@ -76,6 +75,7 @@ void differentialManchester(int data[], int n)
 int main()
 {
     int n;
+
     printf("\nEnter the number of data bits: ");
     scanf("%d", &n);
 

@@ -1,69 +1,76 @@
 /*
 PR4_6_DistanceVectorRouting.c:
-Program to implement Distance Vector Routing using Bellman-Ford equation rules.
+Program to implement Distance Vector Routing using the Bellman-Ford Algorithm.
 */
 
 #include <stdio.h>
 
-struct node
+#define MAX_ROUTERS 10
+#define INF 999
+
+typedef struct
 {
-    int dist[20];
-    int from[20];
-} routing_tables[20];
+    int cost[MAX_ROUTERS];
+    int next_hop[MAX_ROUTERS];
+} RoutingTable;
 
 int main()
 {
-    int cost_matrix[20][20];
-    int nodes_count;
+    int n; // Number of routers
+    int cost[MAX_ROUTERS][MAX_ROUTERS];
+    RoutingTable table[MAX_ROUTERS];
 
-    printf("\n=== Distance Vector Routing Simulator ===\n");
-    printf("Enter total number of network routers/nodes: ");
-    scanf("%d", &nodes_count);
+    printf("\nEnter number of routers (Max. %d): ", MAX_ROUTERS);
+    scanf("%d", &n);
 
-    printf("Enter the cost adjacency matrix (use 999 for infinity):\n");
-    for (int i = 0; i < nodes_count; i++)
+    printf("\n--- Enter cost matrix (use %d for infinity) ---\n", INF);
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < nodes_count; j++)
+        printf("From Router %d (to router 0, 1, ... , and %d): ", i, n-1);
+        for (int j = 0; j < n; j++)
         {
-            scanf("%d", &cost_matrix[i][j]);
-            cost_matrix[i][i] = 0;
-            routing_tables[i].dist[j] = cost_matrix[i][j];
-            routing_tables[i].from[j] = j;
+            scanf("%d", &cost[i][j]);
+            cost[i][j] = (i == j) ? 0 : cost[i][j];
+            table[i].cost[j] = cost[i][j];
+            table[i].next_hop[j] = (cost[i][j] != INF && i != j) ? j : -1;
         }
     }
 
-    // Converge the routing data matrices using Bellman-Ford iterative evaluations
-    int count = 0;
+    // Bellman-Ford Algorithm: Update until convergence
+    int updated;
     do
     {
-        count = 0;
-        for (int i = 0; i < nodes_count; i++)
+        updated = 0;
+        for (int i = 0; i < n; i++)
         {
-            for (int j = 0; j < nodes_count; j++)
+            for (int j = 0; j < n; j++)
             {
-                for (int k = 0; k < nodes_count; k++)
+                for (int k = 0; k < n; k++)
                 {
-                    if (routing_tables[i].dist[j] > cost_matrix[i][k] + routing_tables[k].dist[j])
+                    if (table[i].cost[j] > cost[i][k] + table[k].cost[j])
                     {
-                        routing_tables[i].dist[j] = cost_matrix[i][k] + routing_tables[k].dist[j];
-                        routing_tables[i].from[j] = k;
-                        count++;
+                        table[i].cost[j] = cost[i][k] + table[k].cost[j];
+                        table[i].next_hop[j] = k;
+                        updated = 1;
                     }
                 }
             }
         }
-    } while (count != 0);
+    } while (updated);
 
-    // Display localized matrix solutions
-    for (int i = 0; i < nodes_count; i++)
+    // Print final routing tables
+    printf("\n--- Final Routing Tables ---\n");
+    for (int i = 0; i < n; i++)
     {
-        printf("\nTopology Routing Update Map for Router %c:\n", 'A' + i);
-        printf("Destination\tShortest Distance\tNext Hop Route Node\n");
-        for (int j = 0; j < nodes_count; j++)
+        printf("\nRouter %d Routing Table:\n", i);
+        printf("Destination    Cost    Next Hop\n");
+        for (int j = 0; j < n; j++)
         {
-            printf("%c\t\t%d\t\t\t%c\n", 'A' + j, routing_tables[i].dist[j], 'A' + routing_tables[i].from[j]);
+            printf("%10d %8d %10d\n", j, table[i].cost[j],
+                   (i == j) ? i : table[i].next_hop[j]);
         }
     }
+
     printf("\n");
     return 0;
 }

@@ -1,97 +1,106 @@
 /*
 PR4_7_LinkStateRouting.c:
-Program to implement Link State Routing using Dijkstra's Algorithm graph parsing logic.
+Program to implement Link State Routing using the Dijkstra Algorithm.
 */
 
 #include <stdio.h>
+#include <limits.h>
 
+#define MAX 100
 #define INF 999
 
-void dijkstra(int cost[20][20], int n, int startnode)
+int cost[MAX][MAX], dist[MAX], visited[MAX], prev[MAX];
+int n;
+
+void dijkstra(int src)
 {
-    int distance[20], pred[20];
-    int visited[20], count, mindistance, nextnode;
-
     for (int i = 0; i < n; i++)
     {
-        distance[i] = cost[startnode][i];
-        pred[i] = startnode;
+        dist[i] = cost[src][i];
         visited[i] = 0;
+        prev[i] = (cost[src][i] != INF && i != src) ? src : -1;
     }
 
-    distance[startnode] = 0;
-    visited[startnode] = 1;
-    count = 1;
+    dist[src] = 0;
+    visited[src] = 1;
 
-    while (count < n - 1)
+    for (int count = 1; count < n; count++)
     {
-        mindistance = INF;
+        int min = INF, u = -1;
 
-        // Find the node with the minimum distance metric from unvisited pools
         for (int i = 0; i < n; i++)
-        {
-            if (distance[i] < mindistance && !visited[i])
+            if (!visited[i] && dist[i] < min)
             {
-                mindistance = distance[i];
-                nextnode = i;
+                min = dist[i];
+                u = i;
             }
-        }
 
-        visited[nextnode] = 1;
-        for (int i = 0; i < n; i++)
+        if (u == -1) break;  // No more reachable nodes
+
+        visited[u] = 1;
+
+        for (int v = 0; v < n; v++)
         {
-            if (!visited[i])
+            if (!visited[v] && cost[u][v] != INF && dist[u] + cost[u][v] < dist[v])
             {
-                if (mindistance + cost[nextnode][i] < distance[i])
-                {
-                    distance[i] = mindistance + cost[nextnode][i];
-                    pred[i] = nextnode;
-                }
+                dist[v] = dist[u] + cost[u][v];
+                prev[v] = u;
             }
-        }
-        count++;
-    }
-
-    // Output shortest topology configurations
-    printf("\nShortest Link-State Path Mapping from Source Router %c:\n", 'A' + startnode);
-    for (int i = 0; i < n; i++)
-    {
-        if (i != startnode)
-        {
-            printf("Router Destination %c: Minimum Metric Cost = %d (Path Tracer Sequence: %c", 'A' + i, distance[i], 'A' + i);
-            int j = i;
-            do
-            {
-                j = pred[j];
-                printf(" <- %c", 'A' + j);
-            } while (j != startnode);
-            printf(")\n");
         }
     }
 }
 
+void print_path(int dest)
+{
+    if (prev[dest] == -1)
+    {
+        printf("%d", dest);
+        return;
+    }
+    print_path(prev[dest]);
+    printf(" -> %d", dest);
+}
+
 int main()
 {
-    int adj_cost[20][20], total_routers, source;
+    int src;
 
-    printf("\n=== Link State Routing Simulator (Dijkstra) ===\n");
-    printf("Enter structural count of network routers: ");
-    scanf("%d", &total_routers);
+    printf("\nEnter number of routers: ");
+    scanf("%d", &n);
 
-    printf("Enter Routing Link Cost Adjacency Matrix (use 999 for Unreachable/Infinite nodes):\n");
-    for (int i = 0; i < total_routers; i++)
+    printf("\n--- Enter cost matrix (use %d for infinity) ---\n", INF);
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < total_routers; j++)
+        printf("From Router %d (to router 0, 1, ... , and %d): ", i, n-1);
+        for (int j = 0; j < n; j++)
         {
-            scanf("%d", &adj_cost[i][j]);
+            scanf("%d", &cost[i][j]);
+            if (i == j) cost[i][j] = 0;
         }
     }
 
-    printf("Select local Root Source Router index ID (0 for A, 1 for B, etc.): ");
-    scanf("%d", &source);
+    printf("\nEnter source router (0 to %d): ", n - 1);
+    scanf("%d", &src);
 
-    dijkstra(adj_cost, total_routers, source);
+    dijkstra(src);
+
+    printf("\nShortest paths from router %d:\n", src);
+    for (int i = 0; i < n; i++)
+    {
+        if (i == src) continue;
+
+        printf("To %d: Cost = %d, Path = ", i, dist[i]);
+        if (dist[i] == INF)
+        {
+            printf("No path\n");
+        }
+        else
+        {
+            print_path(i);
+            printf("\n");
+        }
+    }
+
     printf("\n");
-
     return 0;
 }

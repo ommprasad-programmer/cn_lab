@@ -1,80 +1,136 @@
 /*
-PR5_1_UDPSimulation.c:
-Program to simulate connectionless UDP Data Transfer.
+PR5_1_UDPDataTransfer.c:
+Program to simulate data transfer using UDP.
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <time.h>
 
-#define MAX_PAYLOAD 50
+#define CHUNK_SIZE 16    // 128 bits = 16 bytes
+#define MAX_MSG 1024
+#define PORT_SENDER 4000
+#define PORT_RECEIVER 5000
+#define LOSS_PROB 0.25   // 25% chance to lose a packet
 
-struct Datagram
+// Simulated UDP packet structure
+typedef struct
 {
-    int source_port;
-    int dest_port;
-    int total_length;
-    int checksum;
-    char payload[MAX_PAYLOAD];
-};
+    unsigned short src_port;
+    unsigned short dest_port;
+    unsigned short length;
+    unsigned short checksum;
+    char data[CHUNK_SIZE];
+} UDP_Packet;
 
-int calculateSimpleChecksum(const char *data)
+int simulate_loss()
 {
-    int sum = 0;
-    for (int i = 0; i < strlen(data); i++)
+    return ((float)rand() / RAND_MAX) < LOSS_PROB;
+}
+
+void sender(const char *message)
+{
+    int sockfd;
+    struct sockaddr_in receiver_addr;
+    socklen_t len = sizeof(receiver_addr);
+
+    int total_chunks = (strlen(message) + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    receiver_addr.sin_family = AF_INET;
+    receiver_addr.sin_port = htons(PORT_RECEIVER);
+    receiver_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    printf("\n=== SENDER ===\n");
+
+    for (int i = 0; i < total_chunks; i++)
     {
-        sum += (int)data[i];
+        UDP_Packet pkt = {0};
+        strncpy(pkt.data, &message[i * CHUNK_SIZE], CHUNK_SIZE);
+
+        pkt.src_port = PORT_SENDER;
+        pkt.dest_port = PORT_RECEIVER;
+        pkt.length = sizeof(pkt);
+        pkt.checksum = 0; // placeholder
+
+        printf("\n[Sender] Packet %d Header:\n", i + 1);
+        printf("  Source Port:      %d\n", pkt.src_port);
+        printf("  Destination Port: %d\n", pkt.dest_port);
+        printf("  Length:           %d bytes\n", pkt.length);
+        printf("  Checksum:         %d (dummy)\n", pkt.checksum);
+        printf("  Data:             \"%.*s\"\n", CHUNK_SIZE, pkt.data);
+
+        sendto(sockfd, &pkt, sizeof(pkt), 0, (struct sockaddr *)&receiver_addr, len);
+        usleep(50000); // simulate network delay
     }
-    return sum % 256;
+
+    close(sockfd);
+}
+
+void receiver(int expected_chunks)
+{
+    int sockfd;
+    struct sockaddr_in receiver_addr, sender_addr;
+    socklen_t len = sizeof(sender_addr);
+    UDP_Packet pkt;
+    char message[MAX_MSG] = {0};
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    receiver_addr.sin_family = AF_INET;
+    receiver_addr.sin_port = htons(PORT_RECEIVER);
+    receiver_addr.sin_addr.s_addr = INADDR_ANY;
+
+    bind(sockfd, (struct sockaddr *)&receiver_addr, sizeof(receiver_addr));
+    srand(time(NULL));
+
+    printf("\n=== RECEIVER ===\n");
+
+    int received = 0;
+    while (received < expected_chunks)
+    {
+        int n = recvfrom(sockfd, &pkt, sizeof(pkt), 0,
+                         (struct sockaddr *)&sender_addr, &len);
+        if (n <= 0) continue;
+
+        if (simulate_loss())
+        {
+            printf("[Receiver] Dropped packet %d\n", received + 1);
+            continue;
+        }
+
+        printf("[Receiver] Received packet %d: \"%.*s\"\n", received + 1, CHUNK_SIZE, pkt.data);
+        strncat(message, pkt.data, CHUNK_SIZE);
+        received++;
+    }
+
+    printf("\n[Receiver] Full Reconstructed Message: %s\n", message);
+    close(sockfd);
 }
 
 int main()
 {
-    struct Datagram packet;
-    srand(time(NULL));
+    char message[MAX_MSG];
+    printf("\n=== UDP DATA TRANSFER SIMULATION ===\n");
+    printf("\nEnter your message: ");
+    fgets(message, sizeof(message), stdin);
+    message[strcspn(message, "\n")] = 0;
 
-    printf("\n=== Simulation of UDP Data Transfer (Connectionless) ===\n");
-    printf("Enter Source Port (e.g., 8080): ");
-    scanf("%d", &packet.source_port);
-    printf("Enter Destination Port (e.g., 53): ");
-    scanf("%d", &packet.dest_port);
+    int chunks = (strlen(message) + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-    printf("Enter message payload text (no spaces): ");
-    scanf("%s", packet.payload);
-
-    packet.total_length = sizeof(packet.source_port) + sizeof(packet.dest_port) +
-                          sizeof(packet.total_length) + sizeof(packet.checksum) +
-                          strlen(packet.payload);
-    packet.checksum = calculateSimpleChecksum(packet.payload);
-
-    printf("\n--- Sender: Encapsulating UDP Datagram ---\n");
-    printf("Header -> Src Port: %d | Dest Port: %d | Len: %d bytes | Checksum: 0x%02X\n",
-           packet.source_port, packet.dest_port, packet.total_length, packet.checksum);
-    printf("Transmitting message to the network medium...\n");
-
-    // Simulate connectionless channel behavior (0 = Lost in Transit, 1 = Successfully Received)
-    int channel_status = rand() % 4;
-
-    if (channel_status == 0)
+    pid_t pid = fork();
+    if (pid == 0)
     {
-        printf("\n!!! Network Drop: Datagram lost in transit. No error detection or feedback triggered (Unreliable Mode) !!!\n\n");
+        sleep(1); // ensure receiver binds first
+        sender(message);
     }
     else
     {
-        printf("\n--- Receiver: Processing Arrived Datagram ---\n");
-        printf("Received Packet Content from Port %d: [ %s ]\n", packet.source_port, packet.payload);
-
-        int rx_checksum = calculateSimpleChecksum(packet.payload);
-        if (rx_checksum == packet.checksum)
-        {
-            printf("Integrity Validation: Checksum matches (0x%02X). Data accepted.\n\n", rx_checksum);
-        }
-        else
-        {
-            printf("Integrity Validation Error: Corrupted Checksum! Packet dropped.\n\n");
-        }
+        receiver(chunks);
     }
 
+    printf("\nEnd of Simulation.\n\n");
     return 0;
 }

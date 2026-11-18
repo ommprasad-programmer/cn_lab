@@ -8,15 +8,16 @@ Program to implement the Cyclic Redundancy Check (CRC) error detection method.
 #include <stdlib.h> // For malloc and free
 
 // Function to perform XOR operation on two binary strings
-char *findXor(char *a, char *b)
+char* findXor(char* a, char* b)
 {
     int n = strlen(b);
-    char *result = (char *)malloc(sizeof(char) * n);
+    char* result = (char*)malloc(sizeof(char) * n);
     if (result == NULL)
     {
         perror("\nMemory allocation failed");
         exit(EXIT_FAILURE);
     }
+
     for (int i = 1; i < n; i++)
     { // Skip the first bit for CRC division
         result[i - 1] = (a[i] == b[i]) ? '0' : '1';
@@ -26,12 +27,12 @@ char *findXor(char *a, char *b)
 }
 
 // Function to perform Modulo-2 division (CRC division algorithm)
-char *mod2div(char *dividend, char *divisor)
+char* mod2div(char* dividend, char* divisor)
 {
     int n_dividend = strlen(dividend);
     int n_divisor = strlen(divisor);
 
-    char *temp_dividend = (char *)malloc(sizeof(char) * (n_dividend + 1));
+    char* temp_dividend = (char*)malloc(sizeof(char) * (n_dividend + 1));
     if (temp_dividend == NULL)
     {
         perror("\nMemory allocation failed");
@@ -43,7 +44,7 @@ char *mod2div(char *dividend, char *divisor)
     {
         if (temp_dividend[i] == '1')
         {
-            char *xor_result = findXor(&temp_dividend[i], divisor);
+            char* xor_result = findXor(&temp_dividend[i], divisor);
             for (int j = 0; j < n_divisor - 1; j++)
             {
                 temp_dividend[i + 1 + j] = xor_result[j];
@@ -51,8 +52,7 @@ char *mod2div(char *dividend, char *divisor)
             free(xor_result);
         }
     }
-
-    char *remainder = (char *)malloc(sizeof(char) * (n_divisor));
+    char* remainder = (char*)malloc(sizeof(char) * (n_divisor));
     if (remainder == NULL)
     {
         perror("\nMemory allocation failed");
@@ -65,11 +65,12 @@ char *mod2div(char *dividend, char *divisor)
 }
 
 // Sender side: Encodes data by appending CRC checksum
-char *encodeData(char *data, char *key)
+char* encodeData(char* data, char* key)
 {
     int n_key = strlen(key);
     int n_data = strlen(data);
-    char *padded_data = (char *)malloc(sizeof(char) * (n_data + n_key));
+
+    char* padded_data = (char*)malloc(sizeof(char) * (n_data + n_key));
     if (padded_data == NULL)
     {
         perror("\nMemory allocation failed");
@@ -82,8 +83,8 @@ char *encodeData(char *data, char *key)
     }
     padded_data[n_data + n_key - 1] = '\0';
 
-    char *remainder = mod2div(padded_data, key);
-    char *encoded_data = (char *)malloc(sizeof(char) * (n_data + n_key));
+    char* remainder = mod2div(padded_data, key);
+    char* encoded_data = (char*)malloc(sizeof(char) * (n_data + n_key));
     if (encoded_data == NULL)
     {
         perror("\nMemory allocation failed");
@@ -91,15 +92,16 @@ char *encodeData(char *data, char *key)
     }
     strcpy(encoded_data, data);
     strcat(encoded_data, remainder);
+
     free(padded_data);
     free(remainder);
     return encoded_data;
 }
 
 // Receiver side: Checks if received data has errors
-int receiver(char *code, char *key)
+int receiver(char* code, char* key)
 {
-    char *remainder = mod2div(code, key);
+    char* remainder = mod2div(code, key);
     int error_detected = 0;
     for (int i = 0; i < strlen(remainder); i++)
     {
@@ -120,6 +122,7 @@ int main()
 
     printf("\nEnter the data to be sent (in binary): ");
     scanf("%s", data);
+
     printf("Enter the pre-determined divisor (in binary): ");
     scanf("%s", key);
 
@@ -127,7 +130,7 @@ int main()
     printf("Data: %s\n", data);
     printf("Pre-determined divisor: %s\n", key);
 
-    char *encoded_data = encodeData(data, key);
+    char* encoded_data = encodeData(data, key);
     printf("Codeword (Data + CRC): %s\n", encoded_data);
 
     printf("\n-- Receiver Side --\n");
@@ -158,6 +161,7 @@ int main()
     }
 
     free(encoded_data); // Free dynamically allocated memory
+
     printf("\n");
     return 0;
 }

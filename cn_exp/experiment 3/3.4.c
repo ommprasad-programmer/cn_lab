@@ -6,19 +6,14 @@ Program to implement the data link layer framing method: Bit stuffing and destuf
 #include <stdio.h>
 #include <string.h>
 
-void bitStuff(const char *input, char *stuffed)
+#define MAX 200
+
+// Function to perform bit stuffing
+void bitStuff(const char* input, char* stuffed)
 {
-    int count = 0;
-    int j = 0;
-
-    // Starting flag sequence: 01111110
-    strcpy(stuffed, "01111110");
-    j = 8;
-
-    for (int i = 0; i < strlen(input); i++)
+    int count = 0, j = 0;
+    for (int i = 0; input[i] != '\0'; i++)
     {
-        stuffed[j++] = input[i];
-
         if (input[i] == '1')
         {
             count++;
@@ -28,31 +23,26 @@ void bitStuff(const char *input, char *stuffed)
             count = 0;
         }
 
-        // Stuff a '0' after 5 consecutive '1's
+        stuffed[j++] = input[i];
+
         if (count == 5)
         {
-            stuffed[j++] = '0';
+            stuffed[j++] = '0'; // Insert stuffed 0
             count = 0;
         }
     }
-
-    // Ending flag sequence: 01111110
-    strcat(stuffed, "01111110");
+    stuffed[j] = '\0';
 }
 
-void bitDestuff(const char *stuffed, char *destuffed)
+// Function to perform bit destuffing
+void bitDestuff(const char* stuffed, char* destuffed)
 {
-    int count = 0;
-    int j = 0;
-    int len = strlen(stuffed);
-
-    // Skip the starting flag (first 8 bits) and ending flag (last 8 bits)
-    for (int i = 8; i < len - 8; i++)
+    int count = 0, j = 0;
+    for (int i = 0; stuffed[i] != '\0'; i++)
     {
-        destuffed[j++] = stuffed[i];
-
         if (stuffed[i] == '1')
         {
+
             count++;
         }
         else
@@ -60,10 +50,11 @@ void bitDestuff(const char *stuffed, char *destuffed)
             count = 0;
         }
 
-        // If 5 consecutive '1's are detected, skip the next bit (which is the stuffed '0')
+        destuffed[j++] = stuffed[i];
+
         if (count == 5)
         {
-            i++;
+            i++; // Skip stuffed 0
             count = 0;
         }
     }
@@ -72,16 +63,17 @@ void bitDestuff(const char *stuffed, char *destuffed)
 
 int main()
 {
-    char input[100], stuffed[200], destuffed[100];
+    char input[MAX], stuffed[MAX], destuffed[MAX];
 
-    printf("\nEnter the binary data stream to be transmitted: ");
+    printf("\nEnter binary data (e.g., 0111111010): ");
     scanf("%s", input);
 
     bitStuff(input, stuffed);
-    printf("\nStuffed Frame (with flags): %s\n", stuffed);
+    printf("\n\nStuffed Data: %s\n", stuffed);
 
     bitDestuff(stuffed, destuffed);
-    printf("Destuffed Data:             %s\n\n", destuffed);
+    printf("Destuffed Data: %s\n", destuffed);
 
+    printf("\n");
     return 0;
 }

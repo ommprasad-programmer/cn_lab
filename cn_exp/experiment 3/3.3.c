@@ -11,24 +11,26 @@ Program to implement the data link layer framing method: Character stuffing and 
 #define ESC '\\'
 
 // Function to perform character stuffing
-void stuffData(const char *input, char *stuffed)
+void stuffData(const char* input, char* stuffed)
 {
     int j = 0;
     stuffed[j++] = FLAG; // Starting flag
+
     for (int i = 0; i < strlen(input); i++)
     {
         if (input[i] == FLAG || input[i] == ESC)
         {
-            stuffed[j++] = ESC; // Add escape before reserved character
+            stuffed[j++] = ESC;  // Add escape before reserved character
         }
         stuffed[j++] = input[i];
     }
+
     stuffed[j++] = FLAG; // Ending flag
     stuffed[j] = '\0';
 }
 
 // Function to perform character destuffing
-void destuffData(const char *stuffed, char *destuffed)
+void destuffData(const char* stuffed, char* destuffed)
 {
     int j = 0;
     for (int i = 1; i < strlen(stuffed) - 1; i++)

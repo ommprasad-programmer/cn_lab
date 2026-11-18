@@ -1,60 +1,81 @@
 /*
-PR4_2_SubnetInformation.c:
-Program to evaluate Subnet Bounds: Network Address, Broadcast Address, and Host Capacity.
+PR4_2_SubnetInfo.c:
+Program that takes an IPv4 address and subnet mask as input and calculates the following:
+(1) Network Address
+(2) Broadcast Address
+(3) First Usable Host
+(4) Last Usable Host
+(5) Number of Usable Hosts.
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+// Function to count number of 1s in subnet mask
+int count_ones(unsigned int mask)
+{
+    int count = 0;
+    while (mask)
+    {
+        count += (mask & 1);
+        mask >>= 1;
+    }
+    return count;
+}
+
+// Convert integer IP to dotted-decimal
+void int_to_ip(unsigned int ip, char *buffer)
+{
+    struct in_addr addr;
+    addr.s_addr = htonl(ip);
+    strcpy(buffer, inet_ntoa(addr));
+}
 
 int main()
 {
-    int ip[4], mask[4];
-    int net_addr[4], broad_addr[4];
-    int prefix;
+    char ip_str[20], mask_str[20];
+    unsigned int ip, mask;
 
-    printf("\n=== Determination of Subnet Information ===\n");
-    printf("Enter Base IP Address (separated by spaces, e.g., 192 168 1 10): ");
-    scanf("%d %d %d %d", &ip[0], &ip[1], &ip[2], &ip[3]);
+    printf("\nEnter IP address (e.g., 192.168.1.10): ");
+    scanf("%19s", ip_str);
 
-    printf("Enter CIDR Subnet Mask Prefix Length (e.g., 24 for 255.255.255.0): ");
-    scanf("%d", &prefix);
+    printf("Enter Subnet Mask (e.g., 255.255.255.0): ");
+    scanf("%19s", mask_str);
 
-    if (prefix < 0 || prefix > 32)
+    if (inet_pton(AF_INET, ip_str, &ip) != 1 || inet_pton(AF_INET, mask_str, &mask) != 1)
     {
-        printf("Error: Invalid prefix size allocation.\n");
+        printf("\nInvalid IP address or subnet mask.\n\n");
         return 1;
     }
 
-    // Convert CIDR prefix value into standard 4-octet subnet mask layout
-    unsigned long mask_32bit = (prefix == 0) ? 0 : (0xFFFFFFFF << (32 - prefix));
-    mask[0] = (mask_32bit >> 24) & 0xFF;
-    mask[1] = (mask_32bit >> 16) & 0xFF;
-    mask[2] = (mask_32bit >> 8) & 0xFF;
-    mask[3] = mask_32bit & 0xFF;
+    ip = ntohl(ip);     // Convert to host byte order
+    mask = ntohl(mask); // Convert to host byte order
 
-    printf("\nComputed Subnet Mask: %d.%d.%d.%d\n", mask[0], mask[1], mask[2], mask[3]);
+    unsigned int network = ip & mask;
+    unsigned int broadcast = network | (~mask);
+    unsigned int first_host = (network == broadcast) ? network : network + 1;
+    unsigned int last_host = (network == broadcast) ? network : broadcast - 1;
 
-    // Bitwise operational calculation logic
-    for (int i = 0; i < 4; i++)
-    {
-        net_addr[i] = ip[i] & mask[i];                   // Network ID address = IP AND Mask
-        broad_addr[i] = net_addr[i] | (~mask[i] & 0xFF); // Broadcast Address = Network OR NOT Mask
-    }
+    int ones = count_ones(mask);
+    int usable_hosts = (ones < 31) ? ((1 << (32 - ones)) - 2) : 0;
 
-    printf("Network Address:   %d.%d.%d.%d\n", net_addr[0], net_addr[1], net_addr[2], net_addr[3]);
-    printf("Broadcast Address: %d.%d.%d.%d\n", broad_addr[0], broad_addr[1], broad_addr[2], broad_addr[3]);
+    char net_str[INET_ADDRSTRLEN], bcast_str[INET_ADDRSTRLEN];
+    char first_str[INET_ADDRSTRLEN], last_str[INET_ADDRSTRLEN];
 
-    // Host index evaluation count rules
-    if (prefix >= 31)
-    {
-        printf("Total Usable Hosts: 0 (Point-to-Point links or loopback overrides)\n\n");
-    }
-    else
-    {
-        long total_hosts = 1 << (32 - prefix);
-        long usable_hosts = total_hosts - 2; // Deduced subtraction of network and broadcast lines
-        printf("Total Address Spaces in Subnet: %ld\n", total_hosts);
-        printf("Total Usable Host Placements:   %ld\n\n", usable_hosts);
-    }
+    int_to_ip(network, net_str);
+    int_to_ip(broadcast, bcast_str);
+    int_to_ip(first_host, first_str);
+    int_to_ip(last_host, last_str);
 
+    printf("\n--- Subnet Info ---\n");
+    printf("Network Address      : %s\n", net_str);
+    printf("Broadcast Address    : %s\n", bcast_str);
+    printf("First Usable Host    : %s\n", first_str);
+    printf("Last Usable Host     : %s\n", last_str);
+    printf("Number of Hosts      : %d\n", usable_hosts);
+
+    printf("\n");
     return 0;
 }

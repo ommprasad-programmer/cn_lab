@@ -9,11 +9,12 @@ Program to implement the MLT-3 (Multiline Transition, Three Level) line coding t
 // Function to perform MLT-3 encoding
 void mlt3Encode(const char *data_stream)
 {
-    int current_level = 0;       // Current signal level is set to 0V (-V, 0V, and +V are represented as -1, 0, or +1 respectively)
+    int current_level = 0; // Current signal level is set to 0V (-V, 0V, and +V are represented as -1, 0, or +1 respectively)
     int last_nonzero_level = -1; // Last non-zero level is set to -V
     int i;
 
     printf("\nMLT-3 Encoded Signal: ");
+
     for (i = 0; i < strlen(data_stream); i++)
     {
         char next_bit = data_stream[i];
@@ -32,7 +33,7 @@ void mlt3Encode(const char *data_stream)
             {
                 printf("| -V ");
             }
-            else // if current_level is +1
+            else // if current_level is +1)
             {
                 printf("| +V ");
             }
@@ -53,9 +54,9 @@ void mlt3Encode(const char *data_stream)
                 }
                 else if (current_level == -1)
                 {
-                    printf("|-V ");
+                    printf("| -V ");
                 }
-                else // if current_level is +1
+                else // if current_level is +1)
                 {
                     printf("| +V ");
                 }
